@@ -4,96 +4,85 @@ namespace NNPTPZ1.Mathematics
 {
     public class Polynome
     {
-        /// <summary>
-        /// Coefficient
-        /// </summary>
-        public List<ComplexNumber> Coefficient { get; set; }
+        public List<ComplexNumber> Coefficients { get; private set; }
+
+        public Polynome() => Coefficients = new List<ComplexNumber>();
+
+        public void Add(ComplexNumber coefficient) =>
+            Coefficients.Add(coefficient);
 
         /// <summary>
-        /// Constructor
+        /// Returns a new polynomial representing the derivative of this instance.
         /// </summary>
-        public Polynome() => Coefficient = new List<ComplexNumber>();
+        /// <returns>The derived polynomial.</returns>
 
-        public void Add(ComplexNumber coe) =>
-            Coefficient.Add(coe);
-
-        /// <summary>
-        /// Derives this polynomial and creates new one
-        /// </summary>
-        /// <returns>Derivated polynomial</returns>
         public Polynome Derive()
         {
-            Polynome p = new Polynome();
-            for (int q = 1; q < Coefficient.Count; q++)
+            Polynome result = new Polynome();
+            for (int i = 1; i < Coefficients.Count; i++)
             {
-                p.Coefficient.Add(Coefficient[q].Multiply(new ComplexNumber() { RealPart = q }));
+                result.Coefficients.Add(Coefficients[i].Multiply(new ComplexNumber { RealPart = i }));
             }
 
-            return p;
+            return result;
         }
 
         /// <summary>
-        /// Evaluates polynomial at given point
+        /// Evaluates the polynomial at a specified real value.
         /// </summary>
-        /// <param name="x">point of evaluation</param>
-        /// <returns>y</returns>
-        public ComplexNumber Eval(double x)
-        {
-            var y = Eval(new ComplexNumber() { RealPart = x, ImaginaryPart = 0 });
-            return y;
-        }
+        /// <param name="point">The real value at which to evaluate the polynomial.</param>
+        /// <returns>The resulting complex value.</returns>
+
+        public ComplexNumber Eval(double point) =>
+            Eval(new ComplexNumber { RealPart = point });
 
         /// <summary>
-        /// Evaluates polynomial at given point
+        /// Evaluates the polynomial at a specified complex value.
         /// </summary>
-        /// <param name="x">point of evaluation</param>
-        /// <returns>y</returns>
-        public ComplexNumber Eval(ComplexNumber x)
+        /// <param name="input">The complex value at which to evaluate the polynomial.</param>
+        /// <returns>The resulting complex value.</returns>
+        public ComplexNumber Eval(ComplexNumber input)
         {
-            ComplexNumber s = ComplexNumber.Zero;
-            for (int i = 0; i < Coefficient.Count; i++)
+            ComplexNumber result = ComplexNumber.Zero;
+
+            for (int i = 0; i < Coefficients.Count; i++)
             {
-                ComplexNumber coef = Coefficient[i];
-                ComplexNumber bx = x;
+                ComplexNumber coefficient = Coefficients[i];
+                ComplexNumber powerValue = input;
                 int power = i;
 
                 if (i > 0)
                 {
                     for (int j = 0; j < power - 1; j++)
-                        bx = bx.Multiply(x);
+                        powerValue = powerValue.Multiply(input);
 
-                    coef = coef.Multiply(bx);
+                    coefficient = coefficient.Multiply(powerValue);
                 }
 
-                s = s.Add(coef);
+                result = result.Add(coefficient);
             }
 
-            return s;
+            return result;
         }
 
-        /// <summary>
-        /// ToString
-        /// </summary>
-        /// <returns>String repr of polynomial</returns>
         public override string ToString()
         {
-            string s = "";
-            int i = 0;
-            for (; i < Coefficient.Count; i++)
+            string result = "";
+            
+            for (int i = 0; i < Coefficients.Count; i++)
             {
-                s += Coefficient[i];
+                result += Coefficients[i];
                 if (i > 0)
-                {
-                    int j = 0;
-                    for (; j < i; j++)
+                {                    
+                    for (int j = 0; j < i; j++)
                     {
-                        s += "x";
+                        result += "x";
                     }
                 }
-                if (i + 1 < Coefficient.Count)
-                    s += " + ";
+                if (i + 1 < Coefficients.Count)
+                    result += " + ";
             }
-            return s;
+            return result;
         }
     }
 }

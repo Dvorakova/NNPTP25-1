@@ -49,11 +49,11 @@ namespace NNPTPZ1
             List<ComplexNumber> koreny = new List<ComplexNumber>();
             // TODO: poly should be parameterised?
             Polynome p = new Polynome();
-            p.Coefficient.Add(new ComplexNumber() { RealPart = 1 });
-            p.Coefficient.Add(ComplexNumber.Zero);
-            p.Coefficient.Add(ComplexNumber.Zero);
-            //p.Coefficient.Add(Cplx.Zero);
-            p.Coefficient.Add(new ComplexNumber() { RealPart = 1 });
+            p.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
+            p.Coefficients.Add(ComplexNumber.Zero);
+            p.Coefficients.Add(ComplexNumber.Zero);
+            //p.Coefficients.Add(Cplx.Zero);
+            p.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
             Polynome ptmp = p;
             Polynome pd = p.Derive();
 
