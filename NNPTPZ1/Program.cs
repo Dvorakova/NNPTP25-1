@@ -1,155 +1,220 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
 using System.Drawing;
-using System.Drawing.Design;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Printing;
-using System.Drawing.Text;
-using System.Drawing.Drawing2D;
-using System.Linq.Expressions;
-using System.Threading;
 using NNPTPZ1.Mathematics;
 
 namespace NNPTPZ1
 {
     /// <summary>
-    /// This program should produce Newton fractals.
-    /// See more at: https://en.wikipedia.org/wiki/Newton_fractal
-    /// </summary>
+/// Generates a Newton fractal image based on polynomial root iterations.
+/// </summary>
+/// <remarks>
+/// See: https://en.wikipedia.org/wiki/Newton_fractal
+/// </remarks>
+
     class Program
     {
+        static int[] imageDimensions;
+        static string outputFilePath;
+        static Bitmap bitmap;
+        static double xMin, yMin, xStep, yStep;
+        static List<ComplexNumber> roots;
+        static Polynome polynomial, polynomialDerivative;
+        static Color[] rootColors;
+        static int maxRootIndex;
+        private const int MaxIterations = 30;
+        private const double NewtonIterationTolerance = 0.5;
+        private const double RootProximityThreshold = 0.01;
+        private const string DefaultOutputFilePath = "../../../out.png";
+        private const double MinimalCoordinateValue = 0.0001;
+
         static void Main(string[] args)
+        {            
+            ParseCommandLineArguments(args);
+            
+            PrepareCalculationEnvironment();
+            maxRootIndex = ProcessNewtonIterationAlgorithm();
+            SaveOutputImage();
+        }
+
+        private static void SaveOutputImage()
         {
-            int[] intargs = new int[2];
-            for (int i = 0; i < intargs.Length; i++)
+            bitmap.Save(outputFilePath ?? DefaultOutputFilePath);
+        }
+
+        private static int ProcessNewtonIterationAlgorithm()
+        {
+            for (int i = 0; i < imageDimensions[0]; i++)
             {
-                intargs[i] = int.Parse(args[i]);
-            }
-            double[] doubleargs = new double[4];
-            for (int i = 0; i < doubleargs.Length; i++)
-            {
-                doubleargs[i] = double.Parse(args[i + 2]);
-            }
-            string output = args[6];
-            // TODO: add parameters from args?
-            Bitmap bmp = new Bitmap(intargs[0], intargs[1]);
-            double xmin = doubleargs[0];
-            double xmax = doubleargs[1];
-            double ymin = doubleargs[2];
-            double ymax = doubleargs[3];
-
-            double xstep = (xmax - xmin) / intargs[0];
-            double ystep = (ymax - ymin) / intargs[1];
-
-            List<ComplexNumber> koreny = new List<ComplexNumber>();
-            // TODO: poly should be parameterised?
-            Polynome p = new Polynome();
-            p.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
-            p.Coefficients.Add(ComplexNumber.Zero);
-            p.Coefficients.Add(ComplexNumber.Zero);
-            //p.Coefficients.Add(Cplx.Zero);
-            p.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
-            Polynome ptmp = p;
-            Polynome pd = p.Derive();
-
-            Console.WriteLine(p);
-            Console.WriteLine(pd);
-
-            var clrs = new Color[]
-            {
-                Color.Red, Color.Blue, Color.Green, Color.Yellow, Color.Orange, Color.Fuchsia, Color.Gold, Color.Cyan, Color.Magenta
-            };
-
-            var maxid = 0;
-
-            // TODO: cleanup!!!
-            // for every pixel in image...
-            for (int i = 0; i < intargs[0]; i++)
-            {
-                for (int j = 0; j < intargs[1]; j++)
+                for (int j = 0; j < imageDimensions[1]; j++)
                 {
-                    // find "world" coordinates of pixel
-                    double y = ymin + i * ystep;
-                    double x = xmin + j * xstep;
-
-                    ComplexNumber ox = new ComplexNumber()
-                    {
-                        RealPart = x,
-                        ImaginaryPart = (float)(y)
-                    };
-
-                    if (ox.RealPart == 0)
-                        ox.RealPart = 0.0001;
-                    if (ox.ImaginaryPart == 0)
-                        ox.ImaginaryPart = 0.0001f;
-
-                    //Console.WriteLine(ox);
-
-                    // find solution of equation using newton's iteration
-                    float it = 0;
-                    for (int q = 0; q < 30; q++)
-                    {
-                        var diff = p.Eval(ox).Divide(pd.Eval(ox));
-                        ox = ox.Subtract(diff);
-
-                        //Console.WriteLine($"{q} {ox} -({diff})");
-                        if (Math.Pow(diff.RealPart, 2) + Math.Pow(diff.ImaginaryPart, 2) >= 0.5)
-                        {
-                            q--;
-                        }
-                        it++;
-                    }
-
-                    //Console.ReadKey();
-
-                    // find solution root number
-                    var known = false;
-                    var id = 0;
-                    for (int w = 0; w < koreny.Count; w++)
-                    {
-                        if (Math.Pow(ox.RealPart - koreny[w].RealPart, 2) + Math.Pow(ox.ImaginaryPart - koreny[w].ImaginaryPart, 2) <= 0.01)
-                        {
-                            known = true;
-                            id = w;
-                        }
-                    }
-                    if (!known)
-                    {
-                        koreny.Add(ox);
-                        id = koreny.Count;
-                        maxid = id + 1;
-                    }
-
-                    // colorize pixel according to root number
-                    //int vv = id;
-                    //int vv = id * 50 + (int)it*5;
-                    var vv = clrs[id % clrs.Length];
-                    vv = Color.FromArgb(vv.R, vv.G, vv.B);
-                    vv = Color.FromArgb(Math.Min(Math.Max(0, vv.R - (int)it * 2), 255), Math.Min(Math.Max(0, vv.G - (int)it * 2), 255), Math.Min(Math.Max(0, vv.B - (int)it * 2), 255));
-                    //vv = Math.Min(Math.Max(0, vv), 255);
-                    bmp.SetPixel(j, i, vv);
-                    //bmp.SetPixel(j, i, Color.FromArgb(vv, vv, vv));
+                    ProcessPixelUsingNewtonIteration(i, j);
                 }
             }
 
-            // TODO: delete I suppose...
-            //for (int i = 0; i < 300; i++)
-            //{
-            //    for (int j = 0; j < 300; j++)
-            //    {
-            //        Color c = bmp.GetPixel(j, i);
-            //        int nv = (int)Math.Floor(c.R * (255.0 / maxid));
-            //        bmp.SetPixel(j, i, Color.FromArgb(nv, nv, nv));
-            //    }
-            //}
+            return maxRootIndex;
+        }
 
-            bmp.Save(output ?? "../../../out.png");
-            //Console.ReadKey();
+        private static void ProcessPixelUsingNewtonIteration(int i, int j)
+        {
+            ComplexNumber point = PrepareComplexNumberAtPoint(i, j);
+
+            int convergenceIterations = ProcessNewtonIterationOnSinglePixel(ref point);
+            int rootIndex = FindPolynomeRoot(point);
+            ColorizePixel(i, j, convergenceIterations, rootIndex);
+        }
+
+        /// <summary>
+        /// Colors a single pixel based on the root it converged to and the number of iterations.
+        /// </summary>
+        /// <param name="i">Row index of the pixel.</param>
+        /// <param name="j">Column index of the pixel.</param>
+        /// <param name="convergenceIterations">Number of iterations performed for this pixel.</param>
+        /// <param name="rootIndex">Index of the converged root.</param>
+        private static void ColorizePixel(int i, int j, int convergenceIterations, int rootIndex)
+        {
+            Color color = rootColors[rootIndex % rootColors.Length];
+            color = Color.FromArgb(
+                Math.Min(Math.Max(0, color.R - convergenceIterations * 2), 255), 
+                Math.Min(Math.Max(0, color.G - convergenceIterations * 2), 255), 
+                Math.Min(Math.Max(0, color.B - convergenceIterations * 2), 255)
+                );
+            bitmap.SetPixel(j, i, color);
+        }
+
+        /// <summary>
+        /// Finds the index of the root that is closest to the given complex point.
+        /// Adds the point as a new root if convergenceIterations is not yet known.
+        /// </summary>
+        /// <param name="point">The complex point to check against known roots.</param>
+        /// <returns>The index of the corresponding root.</returns>
+        private static int FindPolynomeRoot(ComplexNumber point)
+        {
+            bool knownRoot = false;
+            int rootIndex = 0;
+            for (int i = 0; i < roots.Count; i++)
+            {
+                if (point.Subtract(roots[i]).GetAbsoluteValue() <= RootProximityThreshold)
+                {
+                    knownRoot = true;
+                    rootIndex = i;
+                }
+            }
+            if (!knownRoot)
+            {
+                roots.Add(point);
+                rootIndex = roots.Count;
+                maxRootIndex = rootIndex + 1;
+            }
+
+            return rootIndex;
+        }
+
+        /// <summary>
+        /// Applies Newton's iteration to refine the complex point until convergence.
+        /// </summary>
+        /// <param name="point">The complex number representing the pixel position (modified by reference).</param>
+        /// <returns>The number of iterations performed.</returns>
+        private static int ProcessNewtonIterationOnSinglePixel(ref ComplexNumber point)
+        {
+            int iteration = 0;
+            for (int i = 0; i < MaxIterations; i++)
+            {
+                ComplexNumber differential = polynomial.Eval(point).Divide(polynomialDerivative.Eval(point));
+                point = point.Subtract(differential);
+
+                if (differential.GetAbsoluteValue() >= NewtonIterationTolerance)
+                {
+                    i--;
+                }
+                iteration++;
+            }
+
+            return iteration;
+        }
+
+        /// <summary>
+        /// Prepares a complex number representing the coordinates of a pixel
+        /// in the fractal's "world" coordinate system.
+        /// </summary>
+        /// <param name="i">Row index of the pixel.</param>
+        /// <param name="j">Column index of the pixel.</param>
+        /// <returns>A ComplexNumber representing the pixel's position.</returns>
+        private static ComplexNumber PrepareComplexNumberAtPoint(int i, int j)
+        {
+            double y = yMin + i * yStep;
+            double x = xMin + j * xStep;
+
+            ComplexNumber point = new ComplexNumber()
+            {
+                RealPart = x,
+                ImaginaryPart = y
+            };
+
+            if (point.RealPart == 0)
+                point.RealPart = MinimalCoordinateValue;
+            if (point.ImaginaryPart == 0)
+                point.ImaginaryPart = MinimalCoordinateValue;
+
+            return point;
+        }
+
+        private static void PrepareCalculationEnvironment()
+        {
+            roots = new List<ComplexNumber>();
+            polynomial = new Polynome();
+            polynomial.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
+            polynomial.Coefficients.Add(ComplexNumber.Zero);
+            polynomial.Coefficients.Add(ComplexNumber.Zero);
+            polynomial.Coefficients.Add(new ComplexNumber() { RealPart = 1 });
+            polynomialDerivative = polynomial.Derive();
+            Console.WriteLine(polynomial);
+            Console.WriteLine(polynomialDerivative);
+
+            rootColors = new Color[]
+            {
+                Color.Red, 
+                Color.Blue,
+                Color.Green,
+                Color.Yellow,
+                Color.Orange,
+                Color.Fuchsia,
+                Color.Gold,
+                Color.Cyan,
+                Color.Magenta
+            };
+            maxRootIndex = 0;
+        }
+
+        private static void ParseCommandLineArguments(string[] args)
+        {
+            const int WidthIndex = 0;
+            const int HeightIndex = 1;
+            const int XMinIndex = 2;
+            const int XMaxIndex = 3;
+            const int YMinIndex = 4;
+            const int YMaxIndex = 5;
+            const int OutputPathIndex = 6;
+
+            imageDimensions = new int[2];
+            imageDimensions[0] = int.Parse(args[WidthIndex]);
+            imageDimensions[1] = int.Parse(args[HeightIndex]);
+
+            double xMinValue = double.Parse(args[XMinIndex]);
+            double xMaxValue = double.Parse(args[XMaxIndex]);
+            double yMinValue = double.Parse(args[YMinIndex]);
+            double yMaxValue = double.Parse(args[YMaxIndex]);
+
+            outputFilePath = args[OutputPathIndex];
+            bitmap = new Bitmap(imageDimensions[WidthIndex], imageDimensions[HeightIndex]);
+
+            xMin = xMinValue;
+            double xMax = xMaxValue;
+            yMin = yMinValue;
+            double yMax = yMaxValue;
+
+            xStep = (xMax - xMin) / imageDimensions[WidthIndex];
+            yStep = (yMax - yMin) / imageDimensions[HeightIndex];
         }
     }
 }
